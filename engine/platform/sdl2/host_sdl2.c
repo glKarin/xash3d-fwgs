@@ -418,6 +418,9 @@ static void SDLash_EventHandler( SDL_Event *event )
 	}
 }
 
+#ifdef _DIII4A //karin: poll Q3E events
+extern void Android_PollInput(void);
+#endif
 /*
 =============
 SDLash_RunEvents
@@ -431,6 +434,9 @@ void Platform_RunEvents( void )
 	while( host.status != HOST_CRASHED && !host.shutdown_issued && SDL_PollEvent( &event ) )
 		SDLash_EventHandler( &event );
 
+#ifdef _DIII4A //karin: poll Q3E events
+	Android_PollInput();
+#endif
 #if XASH_PSVITA
 	PSVita_InputUpdate();
 #endif

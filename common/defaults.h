@@ -150,7 +150,13 @@ Default build-depended cvar and constant values
 	#define DEFAULT_MODE_HEIGHT  544
 	#define DEFAULT_ALLOWCONSOLE 1
 #elif XASH_ANDROID
+#ifdef _DIII4A //karin: unuse built-in touch
+	#define DEFAULT_TOUCH_ENABLE "0"
+	#define DEFAULT_ALLOWCONSOLE 1
+	#define DEFAULT_M_IGNORE     "0"
+#else
 	#define DEFAULT_TOUCH_ENABLE "1"
+#endif
 #elif XASH_MOBILE_PLATFORM
 	#define DEFAULT_TOUCH_ENABLE "1"
 	#define DEFAULT_M_IGNORE     "1"

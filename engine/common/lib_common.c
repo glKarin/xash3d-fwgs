@@ -21,6 +21,62 @@ GNU General Public License for more details.
 
 static char s_szLastError[1024] = "";
 
+#ifdef _DIII4A //karin: choose server/client library
+#define Q3E_SERVER_CLIENT_AUTO 0
+#define Q3E_SERVER_CLIENT_HL 1
+#define Q3E_SERVER_CLIENT_CS16 2
+#define Q3E_SERVER_CLIENT_CS16_YAPB 3
+static int sv_cl = -1;
+static int Q3E_ServerClientLib()
+{
+	if(sv_cl >= 0)
+		return sv_cl;
+
+	sv_cl = Q3E_SERVER_CLIENT_AUTO;
+	char svcl[32] = { 0 };
+	if( Sys_CheckParm( "-cstrike" ))
+	{
+		sv_cl = Q3E_SERVER_CLIENT_CS16;
+		if( Sys_GetParmFromCmdLine( "-cstrike", svcl ))
+		{
+			if(!Q_stricmp(svcl, "yapb"))
+				sv_cl = Q3E_SERVER_CLIENT_CS16_YAPB;
+		}
+	}
+	if( Sys_GetParmFromCmdLine( "-sv_cl", svcl ))
+	{
+		if(!Q_stricmp(svcl, "cs16"))
+			sv_cl = Q3E_SERVER_CLIENT_CS16;
+		else if(!Q_stricmp(svcl, "cs16_yapb"))
+			sv_cl = Q3E_SERVER_CLIENT_CS16_YAPB;
+		else if(!Q_stricmp(svcl, "hl"))
+			sv_cl = Q3E_SERVER_CLIENT_HL;
+	}
+
+	switch(sv_cl)
+	{
+		case Q3E_SERVER_CLIENT_CS16:
+			Q_strncpy( svcl, "cs16", sizeof( svcl ));
+			break;
+		case Q3E_SERVER_CLIENT_CS16_YAPB:
+			Q_strncpy( svcl, "cs16_yapb", sizeof( svcl ));
+			break;
+		case Q3E_SERVER_CLIENT_HL:
+			Q_strncpy( svcl, "hl", sizeof( svcl ));
+			break;
+		case Q3E_SERVER_CLIENT_AUTO:
+		default:
+			Q_strncpy( svcl, "", sizeof( svcl ));
+			break;
+	}
+	printf("Server/Client -> %s(%d)\n", svcl, sv_cl);
+	return sv_cl;
+}
+#define Q3E_RUN_CS16_SERVER_CLIENT() (Q3E_ServerClientLib() == Q3E_SERVER_CLIENT_CS16)
+#define Q3E_RUN_CS16_YAPB_SERVER_CLIENT() (Q3E_ServerClientLib() == Q3E_SERVER_CLIENT_CS16_YAPB)
+#define Q3E_RUN_HL_SERVER_CLIENT() (Q3E_ServerClientLib() == Q3E_SERVER_CLIENT_HL)
+#endif
+
 const char *COM_GetLibraryError( void )
 {
 	return s_szLastError;
@@ -141,7 +197,11 @@ static void COM_GenerateClientLibraryPath( const char *name, char *out, size_t s
 
 	COM_GenerateCommonLibraryName( name, libname, sizeof( libname ));
 
+#ifdef _DIII4A //karin: don't insert folder
+    Q_snprintf( out, size, "%s", libname );
+#else
 	Q_snprintf( out, size, "%s/%s", GI->dll_path, libname );
+#endif
 #endif
 }
 
@@ -196,9 +256,29 @@ static void COM_GenerateServerLibraryPath( const char *alt_dllname, char *out, s
 		base_dllname = COM_FileWithoutPath( temp );
 	}
 
+#ifdef _DIII4A //karin: rename server library
+	char serverlibname[MAX_SYSPATH] = { 0 };
+	if(Q3E_RUN_CS16_SERVER_CLIENT())
+		Q_strncpy( serverlibname, "server_cs", sizeof( serverlibname ) );
+	else if(Q3E_RUN_CS16_YAPB_SERVER_CLIENT())
+		Q_strncpy( serverlibname, "server_yapb", sizeof( serverlibname ) );
+	else if(Q3E_RUN_HL_SERVER_CLIENT())
+		Q_strncpy( serverlibname, "server_hl", sizeof( serverlibname ) );
+	else
+	{
+		if(Q_strcmp(GI->game_dll, "hl") == 0 || Q_strcmp(GI->game_dll, "cs") == 0)
+			Q_snprintf( serverlibname, sizeof( serverlibname ), "server_%s", GI->game_dll );
+		else
+			Q_snprintf( serverlibname, sizeof( serverlibname ), "server_hl" );
+	}
+	COM_GenerateCommonLibraryName( serverlibname, libname, sizeof( libname ));
+
+    Q_snprintf( out, size, "%s", libname );
+#else
 	COM_GenerateCommonLibraryName( base_dllname, libname, sizeof( libname ));
 
 	Q_snprintf( out, size, "%s/%s", dir, libname );
+#endif
 #endif
 }
 
@@ -221,7 +301,34 @@ void COM_GetCommonLibraryPath( ECommonLibraryType eLibType, char *out, size_t si
 				COM_GenerateClientLibraryPath( host.menulib + 1, out, size );
 			else Q_strncpy( out, host.menulib, size );
 		}
-		else COM_GenerateClientLibraryPath( "menu", out, size );
+		else
+		{
+#ifdef _DIII4A //karin: rename menu library
+		if(Q3E_RUN_CS16_SERVER_CLIENT() || Q3E_RUN_CS16_YAPB_SERVER_CLIENT())
+			COM_GenerateClientLibraryPath( "menu_cs", out, size );
+		else if(Q3E_RUN_HL_SERVER_CLIENT())
+			COM_GenerateClientLibraryPath( "menu_hl", out, size );
+		else
+		{
+			string temp;
+			const char *dllname;
+			Q_strncpy( temp, GI->game_dll_linux, sizeof( temp ));
+			COM_StripExtension( temp );
+			COM_StripIntelSuffix( temp );
+			dllname = COM_FileWithoutPath( temp );
+			if(Q_strcmp(dllname, "hl") == 0 || Q_strcmp(dllname, "cs") == 0)
+			{
+				char libname[MAX_SYSPATH] = { 0 };
+				Q_snprintf(libname, sizeof(libname), "menu_%s", dllname);
+				COM_GenerateClientLibraryPath( libname, out, size );
+			}
+			else
+				COM_GenerateClientLibraryPath( "menu_hl", out, size );
+		}
+#else
+			COM_GenerateClientLibraryPath( "menu", out, size );
+#endif
+		}
 		break;
 	case LIBRARY_CLIENT:
 		if( !COM_StringEmpty( host.clientlib ))
@@ -230,7 +337,34 @@ void COM_GetCommonLibraryPath( ECommonLibraryType eLibType, char *out, size_t si
 				COM_GenerateClientLibraryPath( host.clientlib + 1, out, size );
 			else Q_strncpy( out, host.clientlib, size );
 		}
-		else COM_GenerateClientLibraryPath( "client", out, size );
+		else
+		{
+#ifdef _DIII4A //karin: rename client library
+			if(Q3E_RUN_CS16_SERVER_CLIENT() || Q3E_RUN_CS16_YAPB_SERVER_CLIENT())
+				COM_GenerateClientLibraryPath( "client_cs", out, size );
+			else if(Q3E_RUN_HL_SERVER_CLIENT())
+				COM_GenerateClientLibraryPath( "client_hl", out, size );
+			else
+			{
+				string temp;
+				const char *dllname;
+				Q_strncpy( temp, GI->game_dll_linux, sizeof( temp ));
+				COM_StripExtension( temp );
+				COM_StripIntelSuffix( temp );
+				dllname = COM_FileWithoutPath( temp );
+				if(Q_strcmp(dllname, "hl") == 0 || Q_strcmp(dllname, "cs") == 0)
+				{
+					char libname[MAX_SYSPATH] = { 0 };
+					Q_snprintf(libname, sizeof(libname), "client_%s", dllname);
+					COM_GenerateClientLibraryPath( libname, out, size );
+				}
+				else
+					COM_GenerateClientLibraryPath( "client_hl", out, size );
+			}
+#else
+			COM_GenerateClientLibraryPath( "client", out, size );
+#endif
+		}
 		break;
 	case LIBRARY_SERVER:
 		if( !COM_StringEmpty( host.gamedll ))

@@ -211,7 +211,11 @@ static void FS_UnloadProgs( void )
 #ifdef XASH_INTERNAL_GAMELIBS
 #define FILESYSTEM_STDIO_DLL "filesystem_stdio"
 #elif XASH_ANDROID
+#ifdef _DIII4Axxx //karin: add xash3d_ prefix on library(TODO: can't rename this, because CS16-client using it)
+#define FILESYSTEM_STDIO_DLL "xash3d_filesystem_stdio"
+#else
 #define FILESYSTEM_STDIO_DLL "libfilesystem_stdio.so"
+#endif
 #else
 #define FILESYSTEM_STDIO_DLL "filesystem_stdio." OS_LIB_EXT
 #endif
@@ -256,6 +260,11 @@ static qboolean FS_LoadProgs( void )
 
 static qboolean FS_DetermineRootDirectory( char *out, size_t size )
 {
+#ifdef _DIII4A //karin: using cwd as user data directory
+	extern const char * Sys_GameDataDefaultPath();
+	Q_snprintf(out, size, "%s", Sys_GameDataDefaultPath());
+	return true;
+#endif
 	const char *path = getenv( "XASH3D_BASEDIR" );
 
 	if( !COM_StringEmptyOrNULL( path ))
@@ -309,6 +318,16 @@ static qboolean FS_DetermineRootDirectory( char *out, size_t size )
 
 static qboolean FS_DetermineReadOnlyRootDirectory( char *out, size_t size )
 {
+#ifdef _DIII4A //karin: using /Android/data as game data directory
+	extern const char * Sys_ApplicationHomePath();
+    extern const char * Sys_GameDataDefaultPath();
+    const char *a = Sys_ApplicationHomePath();
+    const char *b = Sys_GameDataDefaultPath();
+    if(!Q_stricmp(a, b)) // it cause error if same
+        return false;
+	Q_snprintf(out, size, "%s", a);
+	return true;
+#endif
 	const char *env_rodir = getenv( "XASH3D_RODIR" );
 
 	if( _Sys_GetParmFromCmdLine( "-rodir", out, size ))

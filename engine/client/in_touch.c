@@ -904,6 +904,7 @@ static void Touch_LoadDefaults_f( void )
 // Add default button from client
 void Touch_AddDefaultButton( const char *name, const char *texture, const char *command, float x1, float y1, float x2, float y2, byte *color, int round, float aspect, int flags )
 {
+#if !defined(_DIII4A) //karin: don't draw built-in vkb
 	touchdefaultbutton_t *b;
 
 	g_DefaultButtons = Mem_Realloc( touch.mempool, g_DefaultButtons, sizeof( *g_DefaultButtons ) * ( g_DefaultButtonsLength + 1 ));
@@ -923,6 +924,7 @@ void Touch_AddDefaultButton( const char *name, const char *texture, const char *
 	b->flags = flags;
 
 	g_DefaultButtonsLength++;
+#endif
 }
 
 // Client may remove all default buttons from engine
@@ -1186,6 +1188,10 @@ void Touch_Init( void )
 
 	// input devices cvar
 	Cvar_RegisterVariable( &touch_emulate );
+
+#ifdef _DIII4A //karin: remove all buttons
+    Touch_RemoveAll_f();
+#endif
 
 	touch.initialized = true;
 }
@@ -1486,10 +1492,18 @@ static void Touch_DrawButtons( touchbuttonlist_t *list )
 
 void Touch_Draw( void )
 {
+#ifdef _DIII4A //karin: don't draw built-in vkb
+    if( !touch.initialized )
+#else
 	if( !touch.initialized || ( !touch_enable.value && !touch.clientonly ))
+#endif
 		return;
 
+#ifdef _DIII4A //karin: don't draw built-in vkb
+    if( cls.key_dest != key_game )
+#else
 	if( cls.key_dest != key_game && !touch_in_menu.value )
+#endif
 		return;
 
 	Touch_InitConfig();
@@ -2178,7 +2192,11 @@ int IN_TouchEvent( touchEventType type, int fingerID, float x, float y, float dx
 		}
 	}
 
+#ifdef _DIII4A //karin: don't draw built-in vkb
+    if( !touch.initialized )
+#else
 	if( !touch.initialized || ( !touch_enable.value && !touch.clientonly ))
+#endif
 		return false;
 
 	y *= (float)refState.height / refState.width / Touch_AspectRatio();
@@ -2247,7 +2265,11 @@ void Touch_KeyEvent( int key, int down )
 
 qboolean Touch_WantVisibleCursor( void )
 {
+#ifdef _DIII4A //karin: don't draw built-in vkb
+    return touch.clientonly;
+#else
 	return ( touch_enable.value && touch_emulate.value ) || touch.clientonly || touch_in_menu.value;
+#endif
 }
 
 void Touch_Shutdown( void )

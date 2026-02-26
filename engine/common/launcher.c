@@ -21,6 +21,11 @@ GNU General Public License for more details.
 #include <SDL.h>
 #endif
 
+#ifdef _DIII4A //karin: q3e main
+#include "xash3d_types.h"
+#include "main.inc"
+#endif
+
 #ifndef XASH_GAMEDIR
 #define XASH_GAMEDIR "valve" // !!! Replace with your default (base) game directory !!!
 #endif
@@ -59,6 +64,9 @@ int main( int argc, char **argv )
 	szArgc = argc;
 	szArgv = argv;
 #endif // XASH_PSVITA
+#ifdef _DIII4A //karin: setup env
+	Q3E_PostMain(argc, argv);
+#endif
 	return Sys_Start();
 }
 #endif // XASH_ENABLE_MAIN

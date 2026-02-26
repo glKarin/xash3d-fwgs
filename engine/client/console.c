@@ -35,6 +35,10 @@ static CVAR_DEFINE_AUTO( scr_drawversion, "1", FCVAR_ARCHIVE, "draw version in m
 static CVAR_DEFINE_AUTO( con_oldfont, "0", 0, "use legacy font from gfx.wad, might be missing or broken" );
 static CVAR_DEFINE_AUTO( con_showcompletion, "1", FCVAR_ARCHIVE, "perform simplified autocompletion while typing" );
 
+#ifdef _DIII4A //karin: limit console max height
+extern float Android_GetConsoleMaxHeightFrac(float frac);
+#endif
+
 static int g_codepage = 0;
 
 static qboolean g_messagemode_privileged = true;
@@ -2138,12 +2142,22 @@ void Con_RunConsole( void )
 	// decide on the destination height of the console
 	if( host.allow_console && cls.key_dest == key_console )
 	{
+#ifdef _DIII4A //karin: like PC
+        if( cls.state < ca_active || cl.first_frame )
+            con.showlines = refState.height;	// full screen
+        else	// half screen
+        {
+            // con.showlines = (refState.height >> 1);
+            con.showlines = refState.height * Android_GetConsoleMaxHeightFrac(0.5);
+        }
+#else
 #if XASH_MOBILE_PLATFORM
 		con.showlines = refState.height; // always full screen on mobile devices
 #else
 		if( cls.state < ca_active || cl.first_frame )
 			con.showlines = refState.height;	// full screen
 		else con.showlines = (refState.height >> 1);	// half screen
+#endif
 #endif
 	}
 	else con.showlines = 0; // none visible

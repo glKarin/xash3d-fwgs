@@ -56,6 +56,13 @@ void Host_ExitInMain( void )
 {
 	longjmp( return_from_main_buf, 1 );
 }
+#ifdef _DIII4A //karin: q3e globals
+extern int no_handle_signals;
+extern int q3e_running;
+extern int com_fullyInitialized;
+extern int GLimp_CheckGLInitialized(void);
+extern void Sys_SyncState(void);
+#endif
 
 #ifdef XASH_ENGINE_TESTS
 struct tests_stats_s tests_stats;
@@ -1107,6 +1114,9 @@ static void Host_InitCommon( int argc, char **argv, const char *progname, qboole
 	Sys_InitLog();
 	Con_Init(); // early console running to catch all the messages
 
+#ifdef _DIII4A //karin: don't handle built-in signal handlers
+	if(!no_handle_signals)
+#endif
 	if( !Sys_CheckParm( "-noch" ))
 		Sys_SetupCrashHandler( argv[0] );
 
@@ -1341,14 +1351,28 @@ int EXPORT Host_Main( int argc, char **argv, const char *progname, int bChangeGa
 	// check after all configs were executed
 	HPAK_CheckIntegrity( hpk_custom_file.string );
 
+#ifdef _DIII4A //karin: mark initialized
+	com_fullyInitialized = true;
+#endif
+
 	// main window message loop
 	while( host.status != HOST_CRASHED )
 	{
-		double newtime = Platform_DoubleTime();
+#ifdef _DIII4A //karin: q3e pipeline
+	  if(!q3e_running) // exit
+		  break;
+	  if(!GLimp_CheckGLInitialized())
+		  break;
+	  Sys_SyncState();
+#endif
+        double newtime = Platform_DoubleTime();
 		COM_Frame( newtime - oldtime );
 		oldtime = newtime;
 	}
 
+#ifdef _DIII4A //karin: mark uninitialized
+	com_fullyInitialized = false;
+#endif
 	return 0;
 }
 

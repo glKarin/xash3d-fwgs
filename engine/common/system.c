@@ -410,6 +410,9 @@ void Sys_Error( const char *error, ... )
 	Sys_DebugBreak();
 
 	SV_SysError( text );
+#ifdef _DIII4A //karin: for debug
+	printf("%s", text);
+#endif
 
 	if( !Host_IsDedicated() )
 	{
@@ -518,6 +521,9 @@ void Sys_Print( const char *pMsg )
 	}
 #endif
 
+#ifdef _DIII4A //karin: for debug
+	printf("%s", pMsg);
+#endif
 	Sys_PrintLog( pMsg );
 
 	Rcon_Print( &host.rd, pMsg );
@@ -671,6 +677,7 @@ void *Sys_GetNativeObject( const char *obj )
 
 	// Backend should consider that obj is case-sensitive
 #if XASH_ANDROID
+	printf("Android_GetNativeObject %s\n", obj); // _DIII4A
 	ptr = Android_GetNativeObject( obj );
 #endif // XASH_ANDROID
 

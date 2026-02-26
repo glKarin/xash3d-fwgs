@@ -546,6 +546,9 @@ static void IN_JoyAppendMove( usercmd_t *cmd, float forwardmove, float sidemove 
 	}
 }
 
+#ifdef _DIII4A //karin: analog movement
+extern void IN_Analog(float *forward, float *side);
+#endif
 static void IN_CollectInput( float *forward, float *side, float *pitch, float *yaw, qboolean includeMouse )
 {
 	if( includeMouse )
@@ -562,6 +565,9 @@ static void IN_CollectInput( float *forward, float *side, float *pitch, float *y
 
 	Joy_FinalizeMove( forward, side, yaw, pitch );
 	Touch_GetMove( forward, side, yaw, pitch );
+#ifdef _DIII4A //karin: analog movement
+	IN_Analog(forward, side);
+#endif
 
 	if( look_filter.value )
 	{
