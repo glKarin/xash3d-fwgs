@@ -22,7 +22,17 @@ GNU General Public License for more details.
 
 void *ANDROID_LoadLibrary( const char *path )
 {
+#ifdef _DIII4A //karin: normalize library file name
+	const char *libdir[2], *_name = COM_FileWithoutPath( path );
+	char name[MAX_SYSPATH] = { 0 };
+	if(Q_strstr(_name, "lib") != _name)
+		strcat(name, "lib");
+	strcat(name, _name);
+	if(Q_strstr(_name, ".so") != (_name + (strlen(_name) - 3)))
+		strcat(name, ".so");
+#else
 	const char *libdir[2], *name = COM_FileWithoutPath( path );
+#endif
 	char fullpath[MAX_SYSPATH];
 	void *handle;
 
@@ -36,10 +46,17 @@ void *ANDROID_LoadLibrary( const char *path )
 
 		if( !libdir[i] )
 			continue;
+#ifdef _DIII4A //karin: print load dll path
+        if( !libdir[i][0] )
+            continue;
+#endif
 
 		Q_snprintf( fullpath, sizeof( fullpath ), "%s/%s", libdir[i], p );
 
 		handle = dlopen( fullpath, RTLD_NOW );
+#ifdef _DIII4A //karin: print load dll path
+		printf("Load(env) %s -> %p\n", fullpath, handle);
+#endif
 
 		if( handle )
 		{
@@ -50,8 +67,42 @@ void *ANDROID_LoadLibrary( const char *path )
 		COM_PushLibraryError( dlerror() );
 	}
 
+#ifdef _DIII4A //karin: load library from std path
+	extern const char * Sys_DLLInternalPath();
+	extern const char * Sys_DLLDefaultPath();
+	libdir[0] = Sys_DLLInternalPath();
+	libdir[1] = Sys_DLLDefaultPath();
+    if(Q_strcmp(libdir[0], libdir[1]) == 0)
+        libdir[1] = NULL;
+
+	for( int i = 0; i < ARRAYSIZE( libdir ); i++ )
+	{
+		// this is an APK directory, get base path
+		const char *p = name; // i == 0 ? name : path;
+
+		if( !libdir[i] || !libdir[i][0] )
+			continue;
+
+		Q_snprintf( fullpath, sizeof( fullpath ), "%s/%s", libdir[i], p );
+
+		handle = dlopen( fullpath, RTLD_NOW );
+		printf("Load(std) %s -> %p\n", fullpath, handle);
+
+		if( handle )
+		{
+			Con_Reportf( "%s: loading library %s successful\n", __func__, fullpath );
+			return handle;
+		}
+
+		COM_PushLibraryError( dlerror() );
+	}
+#endif
+
 	// find in system search path, that includes our APK
 	handle = dlopen( name, RTLD_NOW );
+#ifdef _DIII4A //karin: print load dll path
+	printf("Load(raw) %s -> %p\n", name, handle);
+#endif
 	if( handle )
 	{
 		Con_Reportf( "%s: loading library %s from LD_LIBRARY_PATH successful\n", __func__, name );

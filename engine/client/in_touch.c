@@ -546,6 +546,7 @@ static void Touch_DisableEdit_f( void )
 
 void Touch_SetClientOnly( byte state )
 {
+    //printf("CCC %d -> %d\n", touch.clientonly, state);
 	// TODO: fix clash with vgui cursors
 	if( touch.clientonly == state )
 		return;
@@ -873,6 +874,7 @@ void Touch_AddClientButton( const char *name, const char *texture, const char *c
 
 static void Touch_LoadDefaults_f( void )
 {
+#if !defined(_DIII4A) //karin: don't draw built-in vkb
 	int i;
 	for( i = 0; i < g_DefaultButtonsLength; i++ )
 	{
@@ -899,6 +901,7 @@ static void Touch_LoadDefaults_f( void )
 		button->aspect = g_DefaultButtons[i].aspect;
 	}
 	touch.configchanged = true;
+#endif
 }
 
 // Add default button from client
@@ -948,6 +951,10 @@ static void Touch_AddButton_f( void )
 	qboolean privileged = Cmd_CurrentCommandIsPrivileged();
 	string texture;
 
+#ifdef _DIII4A //karin: skip built-in vkbs
+    if(!touch.clientonly)
+        return;
+#endif
 	if( Cmd_Argc( ) < 4 )
 	{
 		Con_Printf( S_USAGE "touch_addbutton <name> <texture> <command> [<x1> <y1> <x2> <y2> [ r g b a ] ]\n" );
@@ -958,6 +965,7 @@ static void Touch_AddButton_f( void )
 	Q_strncpy( texture, Cmd_Argv( 2 ), sizeof( texture ));
 	command = Cmd_Argv( 3 );
 
+    //printf("GGG %s:|%s| %d|0x%X\n", name,command,privileged, Cmd_Argc( ) >= 13?Q_atoi( Cmd_Argv( 12 )):-1);
 	// HACKHACK: old engine specifically used .tga for touch buttons
 	// and because new engine extras.pk3 don't have .tga textures
 	// (which instead were converted to .png) strip extension to let
@@ -1004,6 +1012,7 @@ static void Touch_AddButton_f( void )
 
 static void Touch_EnableEdit_f( void )
 {
+#if !defined(_DIII4A) //karin: don't allow edit
 	float current_ratio = (float)refState.height / refState.width;
 
 	if( touch.state == state_none )
@@ -1042,6 +1051,7 @@ static void Touch_EnableEdit_f( void )
 		}
 		touch.config_aspect_ratio = touch.actual_aspect_ratio;
 	}
+#endif
 }
 
 static void Touch_DeleteProfile_f( void )
@@ -1058,6 +1068,7 @@ static void Touch_DeleteProfile_f( void )
 
 static void Touch_InitEditor( void )
 {
+#if !defined(_DIII4A) //karin: don't allow edit
 	float x = 0.1f * (Touch_AspectRatio());
 	float y = 0.05f;
 	touch_button_t *temp;
@@ -1085,6 +1096,7 @@ static void Touch_InitEditor( void )
 
 	touch.hidebutton = Touch_AddButton( &touch.list_edit, "showhide", "touch_default/edit_hide", "touch_toggleselection", 0, y, x, y + 0.1f, color, true );
 	SetBits( touch.hidebutton->flags, TOUCH_FL_HIDE | TOUCH_FL_NOEDIT );
+#endif
 }
 
 void Touch_Init( void )
@@ -1189,10 +1201,6 @@ void Touch_Init( void )
 	// input devices cvar
 	Cvar_RegisterVariable( &touch_emulate );
 
-#ifdef _DIII4A //karin: remove all buttons
-    Touch_RemoveAll_f();
-#endif
-
 	touch.initialized = true;
 }
 
@@ -1231,8 +1239,10 @@ static qboolean Touch_IsVisible( touch_button_t *button )
 	if( !FBitSet( button->flags, TOUCH_FL_CLIENT ) && touch.clientonly )
 		return false; // skip nonclient buttons in clientonly mode
 
+#if !defined(_DIII4A) //karin: don't allow edit
 	if( touch.state >= state_edit )
 		return true; // draw when editor is open
+#endif
 
 	if( FBitSet( button->flags, TOUCH_FL_HIDE ))
 		return false; // skip hidden
@@ -1470,6 +1480,7 @@ static void Touch_DrawButtons( touchbuttonlist_t *list )
 			}
 		}
 
+#if !defined(_DIII4A) //karin: don't allow edit
 		if( touch.state >= state_edit && !FBitSet( b->flags, TOUCH_FL_NOEDIT ))
 		{
 			rgba_t color;
@@ -1486,6 +1497,7 @@ static void Touch_DrawButtons( touchbuttonlist_t *list )
 			MakeRGBA( color, 255, 255, 127, 255 );
 			Con_DrawString( TO_SCRN_X( b->x1 ), TO_SCRN_Y( b->y1 ), b->name, color );
 		}
+#endif
 	}
 
 }
@@ -1510,6 +1522,7 @@ void Touch_Draw( void )
 
 	ref.dllFuncs.GL_SetRenderMode( kRenderTransTexture );
 
+#if !defined(_DIII4A) //karin: don't allow edit
 	if( touch.state >= state_edit && touch_grid_enable.value )
 	{
 		float x;
@@ -1525,9 +1538,11 @@ void Touch_Draw( void )
 		for( x = 0.0f; x < 1.0f; x += GRID_Y )
 			ref.dllFuncs.FillRGBA( kRenderTransTexture, 0, TO_SCRN_Y( x ), TO_SCRN_X( 1 ), 1, 0, 224, 224, 112 );
 	}
+#endif
 
 	Touch_DrawButtons( &touch.list_user );
 
+#if !defined(_DIII4A) //karin: don't allow edit
 	if( touch.state >= state_edit )
 	{
 		if( touch.edit )
@@ -1558,6 +1573,7 @@ void Touch_Draw( void )
 			Con_DrawString( 0, TO_SCRN_Y( GRID_Y * 11 ), text, color );
 		}
 	}
+#endif
 
 	if( touch.move_finger != -1 && touch.move_button && touch_move_indicator.value > 0.0f )
 	{
@@ -1602,6 +1618,7 @@ void Touch_Draw( void )
 // clear move and selection state
 static void IN_TouchEditClear( void )
 {
+#if !defined(_DIII4A) //karin: don't allow edit
 	if( touch.state < state_edit )
 		return;
 
@@ -1613,6 +1630,7 @@ static void IN_TouchEditClear( void )
 	touch.resize_finger = -1;
 	touch.edit = NULL;
 	touch.selection = NULL;
+#endif
 }
 
 static void Touch_EditMove( touchEventType type, int fingerID, float x, float y, float dx, float dy )
@@ -2068,6 +2086,7 @@ static qboolean Touch_ButtonEdit( touchEventType type, int fingerID, float x, fl
 
 static int Touch_ControlsEvent( touchEventType type, int fingerID, float x, float y, float dx, float dy )
 {
+#if !defined(_DIII4A) //karin: don't allow edit
 	if( touch.state == state_edit_move )
 	{
 		Touch_EditMove( type, fingerID, x, y, dx, dy );
@@ -2076,6 +2095,7 @@ static int Touch_ControlsEvent( touchEventType type, int fingerID, float x, floa
 
 	if( touch.state == state_edit && Touch_ButtonEdit( type, fingerID, x, y ))
 		return true;
+#endif
 	if( Touch_ButtonPress( &touch.list_user, type, fingerID, x, y ))
 		return true;
 	if( type == event_motion )

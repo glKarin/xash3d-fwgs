@@ -79,6 +79,9 @@ uint IN_CollectInputDevices( void )
 		FBitSet( ret, INPUT_DEVICE_JOYSTICK ) ? "joy " : "",
 		FBitSet( ret, INPUT_DEVICE_VR )       ? "vr " : "");
 
+#ifdef _DIII4A //karin: allow all input type for server
+    ret = 0;
+#endif
 	return ret;
 }
 
@@ -197,8 +200,10 @@ void IN_ToggleClientMouse( int newstate, int oldstate )
 	}
 
 	// don't leave the user without cursor if they enabled m_ignore
+#if !defined(_DIII4A) //karin: always using mouse
 	if( m_ignore.value )
 		return;
+#endif
 
 	if( oldstate == key_game )
 	{
@@ -279,8 +284,10 @@ static void IN_CheckMouseState( qboolean active )
 	use_raw_input = true; // always use SDL code
 #endif
 
+#if !defined(_DIII4A) //karin: always using mouse
 	if( m_ignore.value )
 		active = false;
+#endif
 
 	if( active && use_raw_input && !host.mouse_visible && cls.state == ca_active )
 		IN_SetRelativeMouseMode( true );
@@ -626,7 +633,11 @@ static void IN_Commands( void )
 	{
 		float forward = 0, side = 0, pitch = 0, yaw = 0;
 
+#ifdef _DIII4A //karin: always handle mouse
+        IN_CollectInput( &forward, &side, &pitch, &yaw, in_mouseinitialized );
+#else
 		IN_CollectInput( &forward, &side, &pitch, &yaw, in_mouseinitialized && !m_ignore.value );
+#endif
 
 		if( cls.key_dest == key_game )
 		{

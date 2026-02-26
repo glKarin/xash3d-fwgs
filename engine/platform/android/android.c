@@ -26,6 +26,12 @@ GNU General Public License for more details.
 #include <SDL.h>
 #endif // XASH_SDL
 
+#ifdef _DIII4A //karin: default fake Android ID
+#define ANDROID_ID "idTech4Amm"
+#define ANDROID_ID_FILE "xash3d.idTech4Amm.aid"
+extern const char * Sys_GameDataDefaultPath();
+#endif
+
 struct jnimethods_s
 {
 	JNIEnv *env;
@@ -41,12 +47,20 @@ void Android_Init( void )
 	memset( &jni, 0, sizeof( jni ));
 
 #if XASH_SDL
+#if !defined(_DIII4A) //karin: unuse any JNI
 	jni.env = (JNIEnv *)SDL_AndroidGetJNIEnv();
 	jni.activity = (jobject)SDL_AndroidGetActivity();
 	jni.actcls = (*jni.env)->GetObjectClass( jni.env, jni.activity );
 	jni.loadAndroidID = (*jni.env)->GetMethodID( jni.env, jni.actcls, "loadAndroidID", "()Ljava/lang/String;" );
 	jni.getAndroidID = (*jni.env)->GetMethodID( jni.env, jni.actcls, "getAndroidID", "()Ljava/lang/String;" );
 	jni.saveAndroidID = (*jni.env)->GetMethodID( jni.env, jni.actcls, "saveAndroidID", "(Ljava/lang/String;)V" );
+#endif
+
+	SDL_SetHint( SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight" );
+	SDL_SetHint( SDL_HINT_JOYSTICK_HIDAPI_STEAM, "1" );
+	SDL_SetHint( SDL_HINT_ANDROID_BLOCK_ON_PAUSE, "0" );
+	SDL_SetHint( SDL_HINT_ANDROID_BLOCK_ON_PAUSE_PAUSEAUDIO, "0" );
+	SDL_SetHint( SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1" );
 #endif // !XASH_SDL
 }
 
@@ -77,6 +91,10 @@ Android_GetAndroidID
 */
 const char *Android_GetAndroidID( void )
 {
+#ifdef _DIII4A //karin: return fake Android ID
+	printf("Android_GetAndroidID() -> %s\n", ANDROID_ID);
+	return ANDROID_ID;
+#else
 	static char id[32];
 	jstring resultJNIStr;
 	const char *resultCStr;
@@ -91,6 +109,7 @@ const char *Android_GetAndroidID( void )
 	(*jni.env)->DeleteLocalRef( jni.env, resultJNIStr );
 
 	return id;
+#endif
 }
 
 /*
@@ -100,6 +119,26 @@ Android_LoadID
 */
 const char *Android_LoadID( void )
 {
+#ifdef _DIII4A //karin: load from cwd
+	char path[MAX_OSPATH] = { 0 };
+	Q_snprintf(path, sizeof(path), "%s/" ANDROID_ID_FILE, Sys_GameDataDefaultPath());
+	FILE *file = fopen(path, "r");
+	if(!file)
+		return ANDROID_ID;
+	static char id[32];
+	int i = 0;
+	while(!feof(file))
+	{
+		int ch = fgetc(file);
+		if(ch < 0)
+			break;
+		id[i++] = ch;
+	}
+	id[i] = '\0';
+	fclose(file);
+	printf("Android_LoadID() -> %s at %s\n", id, path);
+	return id;
+#else
 	static char id[32];
 	jstring resultJNIStr;
 	const char *resultCStr;
@@ -111,6 +150,7 @@ const char *Android_LoadID( void )
 	(*jni.env)->DeleteLocalRef( jni.env, resultJNIStr );
 
 	return id;
+#endif
 }
 
 /*
@@ -120,9 +160,19 @@ Android_SaveID
 */
 void Android_SaveID( const char *id )
 {
+#ifdef _DIII4A //karin: save to cwd
+	char path[MAX_OSPATH] = { 0 };
+	Q_snprintf(path, sizeof(path), "%s/" ANDROID_ID_FILE, Sys_GameDataDefaultPath());
+	FILE *file = fopen(path, "w");
+	fwrite(id, 1, strlen(id), file);
+	fflush(file);
+	fclose(file);
+	printf("Android_SaveID() -> %s to %s\n", id, path);
+#else
 	jstring JStr = (*jni.env)->NewStringUTF( jni.env, id );
 	(*jni.env)->CallVoidMethod( jni.env, jni.activity, jni.saveAndroidID, JStr );
 	(*jni.env)->DeleteLocalRef( jni.env, JStr );
+#endif
 }
 
 /*
