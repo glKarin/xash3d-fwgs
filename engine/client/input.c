@@ -79,7 +79,7 @@ uint IN_CollectInputDevices( void )
 		FBitSet( ret, INPUT_DEVICE_JOYSTICK ) ? "joy " : "",
 		FBitSet( ret, INPUT_DEVICE_VR )       ? "vr " : "");
 
-#ifdef _DIII4A //karin: allow all input type for server
+#ifdef _DIII4A //karin: allow all input type for server. Server will check client input devices in sv_main.c::SV_ProcessUserAgent, it only check exists device, so tell server 0
     ret = 0;
 #endif
 	return ret;
@@ -200,7 +200,7 @@ void IN_ToggleClientMouse( int newstate, int oldstate )
 	}
 
 	// don't leave the user without cursor if they enabled m_ignore
-#if !defined(_DIII4A) //karin: always using mouse
+#if !defined(_DIII4A) //karin: make m_ignore invalid and always enable mouse on Android
 	if( m_ignore.value )
 		return;
 #endif
@@ -284,7 +284,7 @@ static void IN_CheckMouseState( qboolean active )
 	use_raw_input = true; // always use SDL code
 #endif
 
-#if !defined(_DIII4A) //karin: always using mouse
+#if !defined(_DIII4A) //karin: make m_ignore invalid and always enable mouse on Android
 	if( m_ignore.value )
 		active = false;
 #endif
@@ -633,8 +633,8 @@ static void IN_Commands( void )
 	{
 		float forward = 0, side = 0, pitch = 0, yaw = 0;
 
-#ifdef _DIII4A //karin: always handle mouse
-        IN_CollectInput( &forward, &side, &pitch, &yaw, in_mouseinitialized );
+#ifdef _DIII4A //karin: make m_ignore invalid and always enable mouse on Android. And disable view rotation if client touch buttons(e.g. 0-9, team-selector VGUI) are visible
+        IN_CollectInput( &forward, &side, &pitch, &yaw, in_mouseinitialized && !Touch_WantVisibleCursor() );
 #else
 		IN_CollectInput( &forward, &side, &pitch, &yaw, in_mouseinitialized && !m_ignore.value );
 #endif

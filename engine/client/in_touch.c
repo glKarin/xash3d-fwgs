@@ -546,7 +546,6 @@ static void Touch_DisableEdit_f( void )
 
 void Touch_SetClientOnly( byte state )
 {
-    //printf("CCC %d -> %d\n", touch.clientonly, state);
 	// TODO: fix clash with vgui cursors
 	if( touch.clientonly == state )
 		return;
@@ -874,7 +873,7 @@ void Touch_AddClientButton( const char *name, const char *texture, const char *c
 
 static void Touch_LoadDefaults_f( void )
 {
-#if !defined(_DIII4A) //karin: don't draw built-in vkb
+#if !defined(_DIII4A) //karin: don't load built-in virtual buttons
 	int i;
 	for( i = 0; i < g_DefaultButtonsLength; i++ )
 	{
@@ -907,7 +906,7 @@ static void Touch_LoadDefaults_f( void )
 // Add default button from client
 void Touch_AddDefaultButton( const char *name, const char *texture, const char *command, float x1, float y1, float x2, float y2, byte *color, int round, float aspect, int flags )
 {
-#if !defined(_DIII4A) //karin: don't draw built-in vkb
+#if !defined(_DIII4A) //karin: don't add built-in virtual buttons
 	touchdefaultbutton_t *b;
 
 	g_DefaultButtons = Mem_Realloc( touch.mempool, g_DefaultButtons, sizeof( *g_DefaultButtons ) * ( g_DefaultButtonsLength + 1 ));
@@ -951,7 +950,7 @@ static void Touch_AddButton_f( void )
 	qboolean privileged = Cmd_CurrentCommandIsPrivileged();
 	string texture;
 
-#ifdef _DIII4A //karin: skip built-in vkbs
+#ifdef _DIII4A //karin: skip built-in virtual buttons, only keep 0-9, team-selector buttons...
     if(!touch.clientonly)
         return;
 #endif
@@ -965,7 +964,6 @@ static void Touch_AddButton_f( void )
 	Q_strncpy( texture, Cmd_Argv( 2 ), sizeof( texture ));
 	command = Cmd_Argv( 3 );
 
-    //printf("GGG %s:|%s| %d|0x%X\n", name,command,privileged, Cmd_Argc( ) >= 13?Q_atoi( Cmd_Argv( 12 )):-1);
 	// HACKHACK: old engine specifically used .tga for touch buttons
 	// and because new engine extras.pk3 don't have .tga textures
 	// (which instead were converted to .png) strip extension to let
@@ -1504,14 +1502,14 @@ static void Touch_DrawButtons( touchbuttonlist_t *list )
 
 void Touch_Draw( void )
 {
-#ifdef _DIII4A //karin: don't draw built-in vkb
+#ifdef _DIII4A //karin: don't draw built-in virtual buttons
     if( !touch.initialized )
 #else
 	if( !touch.initialized || ( !touch_enable.value && !touch.clientonly ))
 #endif
 		return;
 
-#ifdef _DIII4A //karin: don't draw built-in vkb
+#ifdef _DIII4A //karin: don't draw built-in virtual buttons
     if( cls.key_dest != key_game )
 #else
 	if( cls.key_dest != key_game && !touch_in_menu.value )
@@ -2212,7 +2210,7 @@ int IN_TouchEvent( touchEventType type, int fingerID, float x, float y, float dx
 		}
 	}
 
-#ifdef _DIII4A //karin: don't draw built-in vkb
+#ifdef _DIII4A //karin: don't handle built-in virtual buttons events
     if( !touch.initialized )
 #else
 	if( !touch.initialized || ( !touch_enable.value && !touch.clientonly ))
@@ -2285,7 +2283,7 @@ void Touch_KeyEvent( int key, int down )
 
 qboolean Touch_WantVisibleCursor( void )
 {
-#ifdef _DIII4A //karin: don't draw built-in vkb
+#ifdef _DIII4A //karin: always using mouse cursor, only for virtual buttons(e.g. 0-9, team-selector)
     return touch.clientonly;
 #else
 	return ( touch_enable.value && touch_emulate.value ) || touch.clientonly || touch_in_menu.value;
